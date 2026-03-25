@@ -1,0 +1,16 @@
+[package]
+name = "clap2man"
+description = "Converts a clap cli into a basic manpage that can be further customized"
+version = "0.1.0"
+authors = ["Leandro Lisboa Penz <lpenz@lpenz.org>"]
+edition = "2024"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/lpenz/clap2man"
+repository = "https://github.com/lpenz/clap2man"
+categories = ["development-tools"]
+keywords = ["clap", "cli", "manpage", "generator"]
+
+[dependencies]
+clap = "4.6.0"
+man = "0.3.0"
