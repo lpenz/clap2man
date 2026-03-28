@@ -26,6 +26,7 @@ impl From<&Command> for Manual {
         manpage = fill::fill_author(cmd, manpage);
         manpage = fill::fill_flags(cmd, manpage);
         manpage = fill::fill_positionals(cmd, manpage);
+        manpage = fill::fill_subcommands(cmd, manpage);
         Manual(manpage)
     }
 }

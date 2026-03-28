@@ -61,15 +61,48 @@ pub fn fill_flags(cmd: &Command, manpage: man::Manual) -> man::Manual {
 }
 
 /// Add the positional arguments.
-pub fn fill_positionals(cmd: &Command, manpage: man::Manual) -> man::Manual {
-    cmd.get_positionals().fold(manpage, |manpage, a| {
+pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> man::Manual {
+    let mut arguments_section = man::Section::new("arguments");
+    let mut arguments_found = false;
+
+    for a in cmd.get_positionals() {
         let id = format!("{}", a.get_id());
         let arg = man::Arg::new(&id);
-        let mut flag = man::Flag::new();
-        flag = flag.long(&id);
-        if let Some(help) = a.get_help() {
-            flag = flag.help(&format!("{}", help));
+        manpage = manpage.arg(arg);
+
+        let help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
+        if !help.is_empty() {
+            arguments_found = true;
+            arguments_section = arguments_section.paragraph(&format!("**{}**: {}", id, help));
         }
-        manpage.flag(flag).arg(arg)
-    })
+    }
+
+    if arguments_found {
+        manpage.custom(arguments_section)
+    } else {
+        manpage
+    }
+}
+
+/// Add the subcommands to a "SUBCOMMANDS" section.
+pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> man::Manual {
+    let mut subcommands_section = man::Section::new("subcommands");
+    let mut subcommands_found = false;
+    for sub in cmd.get_subcommands() {
+        if sub.is_hide_set() {
+            continue;
+        }
+        subcommands_found = true;
+        let name = sub.get_name();
+        let about = sub
+            .get_about()
+            .map(|s| format!("{}", s))
+            .unwrap_or_default();
+        subcommands_section = subcommands_section.paragraph(&format!("**{}**: {}", name, about));
+    }
+    if subcommands_found {
+        manpage.custom(subcommands_section)
+    } else {
+        manpage
+    }
 }
