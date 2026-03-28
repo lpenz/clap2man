@@ -10,5 +10,7 @@
 
 //! clap2man converts a clap cli into a basic manpage that can be further customized
 
-mod fill;
-pub use fill::*;
+pub mod fill;
+
+mod wrapper;
+pub use wrapper::Manual;
