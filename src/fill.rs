@@ -8,6 +8,18 @@
 use clap::Command;
 
 /// Fills the "about" section.
+///
+/// # Example
+///
+/// ```rust
+/// use clap::Command;
+/// use clap2man::fill;
+///
+/// let cmd = Command::new("test").about("my test app");
+/// let mut manpage = man::Manual::new("test");
+/// manpage = fill::fill_about(&cmd, manpage);
+/// assert!(manpage.render().contains("my test app"));
+/// ```
 pub fn fill_about(cmd: &Command, manpage: man::Manual) -> man::Manual {
     manpage.about(
         cmd.get_about()
@@ -30,7 +42,29 @@ pub fn fill_author(cmd: &Command, manpage: man::Manual) -> man::Manual {
     manpage.author(man::Author::new(cmd.get_author().unwrap_or_default()))
 }
 
-/// Fills the "flags" section with all the options.
+/// Fills the "flags" section with all the options from the given [`Command`].
+///
+/// This function also adds the default `-h`, `--help`, and `-V`, `--version` flags.
+///
+/// # Example
+///
+/// ```rust
+/// use clap::{Arg, Command};
+/// use clap2man::fill;
+///
+/// let cmd = Command::new("test")
+///     .arg(Arg::new("verbose")
+///         .short('v')
+///         .long("verbose")
+///         .help("Enable verbose mode")
+///         .action(clap::ArgAction::SetTrue));
+/// let mut manpage = man::Manual::new("test");
+/// manpage = fill::fill_flags(&cmd, manpage);
+/// let rendered = manpage.render();
+/// assert!(rendered.contains("Enable verbose mode"));
+/// assert!(rendered.contains("\\-v"));
+/// assert!(rendered.contains("\\-\\-verbose"));
+/// ```
 pub fn fill_flags(cmd: &Command, manpage: man::Manual) -> man::Manual {
     cmd.get_opts()
         .fold(manpage, |manpage, a| {

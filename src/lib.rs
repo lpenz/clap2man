@@ -9,6 +9,32 @@
 #![allow(rustdoc::private_intra_doc_links)]
 
 //! clap2man converts a clap cli into a basic manpage that can be further customized
+//!
+//! # Example
+//!
+//! ```rust
+//! use clap::{Arg, Command};
+//! use clap2man::Manual;
+//!
+//! let cmd = Command::new("test-app")
+//!     .version("1.2.3")
+//!     .author("John Doe <john@doe.com>")
+//!     .about("A test application for clap2man")
+//!     .arg(
+//!         Arg::new("verbose")
+//!             .short('v')
+//!             .long("verbose")
+//!             .help("Enable verbose mode")
+//!             .action(clap::ArgAction::SetTrue),
+//!     );
+//!
+//! let manual = Manual::from(&cmd);
+//! let manpage: man::Manual = manual.into();
+//! let rendered = manpage.render();
+//!
+//! assert!(rendered.contains("test\\-app"));
+//! assert!(rendered.contains("A test application for clap2man"));
+//! ```
 
 pub mod fill;
 

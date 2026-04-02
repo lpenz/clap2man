@@ -9,6 +9,21 @@ use clap::Command;
 use crate::fill;
 
 /// A wrapper over [`man::Manual`] to keep proper hygiene.
+///
+/// Use `Manual::from(&cmd)` to convert a [`clap::Command`] into a [`Manual`],
+/// then use `.into()` to convert it to a [`man::Manual`].
+///
+/// # Example
+///
+/// ```rust
+/// use clap::Command;
+/// use clap2man::Manual;
+///
+/// let cmd = Command::new("test-app");
+/// let manual = Manual::from(&cmd);
+/// let manpage: man::Manual = manual.into();
+/// let rendered = manpage.render();
+/// ```
 #[derive(Debug)]
 pub struct Manual(man::Manual);
 
