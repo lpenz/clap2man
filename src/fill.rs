@@ -65,11 +65,12 @@ pub fn fill_author(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
 ///         .help("Enable verbose mode")
 ///         .action(clap::ArgAction::SetTrue));
 /// let mut manpage = man::Manual::new("test");
-/// manpage = fill::fill_flags(&cmd, manpage).unwrap();
+/// manpage = fill::fill_flags(&cmd, manpage)?;
 /// let rendered = manpage.render();
 /// assert!(rendered.contains("Enable verbose mode"));
 /// assert!(rendered.contains("\\-v"));
 /// assert!(rendered.contains("\\-\\-verbose"));
+/// # Ok::<(), clap2man::Error>(())
 /// ```
 pub fn fill_flags(cmd: &Command, mut manpage: man::Manual) -> Result<man::Manual> {
     let mut longs = std::collections::HashSet::new();

@@ -28,12 +28,13 @@
 //!             .action(clap::ArgAction::SetTrue),
 //!     );
 //!
-//! let manual = Manual::try_from(&cmd).unwrap();
+//! let manual = Manual::try_from(&cmd)?;
 //! let manpage: man::Manual = manual.into();
 //! let rendered = manpage.render();
 //!
 //! assert!(rendered.contains("test\\-app"));
 //! assert!(rendered.contains("A test application for clap2man"));
+//! # Ok::<(), clap2man::Error>(())
 //! ```
 
 pub mod fill;

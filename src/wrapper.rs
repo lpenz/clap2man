@@ -23,9 +23,10 @@ use crate::fill;
 /// let cmd = Command::new("test-app")
 ///     .about("about")
 ///     .author("author");
-/// let manual = Manual::try_from(&cmd).unwrap();
+/// let manual = Manual::try_from(&cmd)?;
 /// let manpage: man::Manual = manual.into();
 /// let rendered = manpage.render();
+/// # Ok::<(), clap2man::Error>(())
 /// ```
 #[derive(Debug)]
 pub struct Manual(man::Manual);

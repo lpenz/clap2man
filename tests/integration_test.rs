@@ -6,7 +6,7 @@ use clap::{Arg, Command};
 use clap2man::Manual;
 
 #[test]
-fn test_integration() {
+fn test_integration() -> Result<(), Box<dyn std::error::Error>> {
     let cmd = Command::new("test-app")
         .version("1.2.3")
         .author("John Doe <john@doe.com>")
@@ -38,7 +38,7 @@ fn test_integration() {
                 .arg(Arg::new("sub-flag").short('s').long("sub-flag")),
         );
 
-    let manual = Manual::try_from(&cmd).unwrap();
+    let manual = Manual::try_from(&cmd)?;
     let manpage: man::Manual = manual.into();
     let rendered = manpage.render();
     println!("{}", rendered);
@@ -60,6 +60,7 @@ fn test_integration() {
     assert!(rendered.contains("\\-\\-verbose"));
     assert!(rendered.contains("\\-c"));
     assert!(rendered.contains("\\-\\-config"));
+    Ok(())
 }
 
 #[test]

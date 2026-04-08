@@ -48,14 +48,15 @@ fn main() {
 
     // Find the target directory (e.g. target/debug or target/release)
     // OUT_DIR is usually target/.../build/crate-hash/out
-    let out_dir = env::var_os("OUT_DIR").expect("OUT_DIR not set");
+    let out_dir = env::var_os("OUT_DIR").ok_or("OUT_DIR not set")?;
     let target_dir = Path::new(&out_dir)
         .ancestors()
         .nth(3)
-        .expect("Could not find target directory");
+        .ok_or("Could not find target directory")?;
 
     let out_path = target_dir.join("test-app.1");
-    fs::write(out_path, rendered).expect("Failed to write manpage");
+    fs::write(out_path, rendered)?;
+    Ok(())
 }
 ```
 
@@ -76,7 +77,7 @@ fn main() {
 Since `Manual::into()` returns a `man::Manual` from the [man](https://crates.io/crates/man) crate, you can use all its methods to further customize the manpage:
 
 ```rust
-let manual = Manual::try_from(&cmd).unwrap();
+let manual = Manual::try_from(&cmd)?;
 let mut manpage: man::Manual = manual.into();
 
 // Add a custom section
@@ -109,3 +110,4 @@ manpage = fill::fill_flags(&cmd, manpage).unwrap();
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+SE](LICENSE) file for details.
