@@ -42,7 +42,7 @@ fn main() {
                 .action(clap::ArgAction::SetTrue),
         );
 
-    let manual = Manual::from(&cmd);
+    let manual = Manual::try_from(&cmd).unwrap();
     let manpage: man::Manual = manual.into();
     let rendered = manpage.render();
 
@@ -76,7 +76,7 @@ fn main() {
 Since `Manual::into()` returns a `man::Manual` from the [man](https://crates.io/crates/man) crate, you can use all its methods to further customize the manpage:
 
 ```rust
-let manual = Manual::from(&cmd);
+let manual = Manual::try_from(&cmd).unwrap();
 let mut manpage: man::Manual = manual.into();
 
 // Add a custom section
@@ -96,8 +96,8 @@ If you don't want to convert everything, you can use the functions in the `fill`
 use clap2man::fill;
 
 let mut manpage = man::Manual::new("my-app");
-manpage = fill::fill_about(&cmd, manpage);
-manpage = fill::fill_flags(&cmd, manpage);
+manpage = fill::fill_about(&cmd, manpage).unwrap();
+manpage = fill::fill_flags(&cmd, manpage).unwrap();
 // Only about and flags are filled; the rest is omitted or manual.
 ```
 
@@ -109,4 +109,3 @@ manpage = fill::fill_flags(&cmd, manpage);
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-

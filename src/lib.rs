@@ -28,7 +28,7 @@
 //!             .action(clap::ArgAction::SetTrue),
 //!     );
 //!
-//! let manual = Manual::from(&cmd);
+//! let manual = Manual::try_from(&cmd).unwrap();
 //! let manpage: man::Manual = manual.into();
 //! let rendered = manpage.render();
 //!
@@ -40,3 +40,23 @@ pub mod fill;
 
 mod wrapper;
 pub use wrapper::Manual;
+
+/// Error type for clap2man
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
+    /// Command about is missing
+    #[error("command about is missing")]
+    MissingAbout,
+    /// Command author is missing
+    #[error("command author is missing")]
+    MissingAuthor,
+    /// Duplicate flag
+    #[error("duplicate flag --{0}")]
+    DuplicateFlag(String),
+    /// Duplicate short flag
+    #[error("duplicate short flag -{0}")]
+    DuplicateShortFlag(char),
+}
+
+/// Result type for clap2man
+pub type Result<T> = std::result::Result<T, Error>;

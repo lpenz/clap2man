@@ -38,7 +38,7 @@ fn test_integration() {
                 .arg(Arg::new("sub-flag").short('s').long("sub-flag")),
         );
 
-    let manual = Manual::from(&cmd);
+    let manual = Manual::try_from(&cmd).unwrap();
     let manpage: man::Manual = manual.into();
     let rendered = manpage.render();
     println!("{}", rendered);
@@ -60,4 +60,32 @@ fn test_integration() {
     assert!(rendered.contains("\\-\\-verbose"));
     assert!(rendered.contains("\\-c"));
     assert!(rendered.contains("\\-\\-config"));
+}
+
+#[test]
+fn test_errors() {
+    let cmd = Command::new("test-app");
+    let result = Manual::try_from(&cmd);
+    assert!(result.is_err());
+    assert!(matches!(result.unwrap_err(), clap2man::Error::MissingAbout));
+
+    let cmd = Command::new("test-app").about("about");
+    let result = Manual::try_from(&cmd);
+    assert!(result.is_err());
+    assert!(matches!(
+        result.unwrap_err(),
+        clap2man::Error::MissingAuthor
+    ));
+
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .arg(Arg::new("flag1").short('f'))
+        .arg(Arg::new("flag2").short('f'));
+    let result = Manual::try_from(&cmd);
+    assert!(result.is_err());
+    assert!(matches!(
+        result.unwrap_err(),
+        clap2man::Error::DuplicateShortFlag('f')
+    ));
 }

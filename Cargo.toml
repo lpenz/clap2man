@@ -14,3 +14,4 @@ keywords = ["clap", "cli", "manpage", "generator"]
 [dependencies]
 clap = "4.6.0"
 man = "0.3.0"
+thiserror = "2.0.11"
