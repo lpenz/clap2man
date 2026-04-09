@@ -6,7 +6,9 @@
 
 # clap2man
 
-Converts a clap cli into a basic manpage that can be further customized
+Converts a [clap](https://crates.io/crates/clap) cli into a
+[man](https://crates.io/crates/man) manpage that can be further
+customized.
 
 ## Usage
 
@@ -27,9 +29,9 @@ use std::env;
 use std::fs;
 use std::path::Path;
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Usually you would import your Command definition from your main crate
-    // (e.g., use my_crate::cli::build_cli;) instead of defining it here.
+    // (e.g., include!("src/cli.rs")) instead of defining it here.
     let cmd = Command::new("test-app")
         .version("1.2.3")
         .author("John Doe <john@doe.com>")
@@ -42,7 +44,7 @@ fn main() {
                 .action(clap::ArgAction::SetTrue),
         );
 
-    let manual = Manual::try_from(&cmd).unwrap();
+    let manual = Manual::try_from(&cmd)?;
     let manpage: man::Manual = manual.into();
     let rendered = manpage.render();
 
@@ -55,7 +57,7 @@ fn main() {
         .ok_or("Could not find target directory")?;
 
     let out_path = target_dir.join("test-app.1");
-    fs::write(out_path, rendered)?;
+    fs::write(out_path, rendered).expect("Failed to write manpage");
     Ok(())
 }
 ```
@@ -74,9 +76,15 @@ fn main() {
 
 ## Customization
 
-Since `Manual::into()` returns a `man::Manual` from the [man](https://crates.io/crates/man) crate, you can use all its methods to further customize the manpage:
+Since `Manual::into()` returns a `man::Manual` from the
+[man](https://crates.io/crates/man) crate, you can use all its
+methods to further customize the manpage:
 
 ```rust
+use clap::Command;
+use clap2man::Manual;
+
+let cmd = Command::new("test-app").about("about").author("author");
 let manual = Manual::try_from(&cmd)?;
 let mut manpage: man::Manual = manual.into();
 
@@ -91,23 +99,28 @@ let rendered = manpage.render();
 
 ## Fine-grained control
 
-If you don't want to convert everything, you can use the functions in the `fill` module directly:
+If you don't want to convert everything, you can use the functions
+in the `fill` module directly:
 
 ```rust
+use clap::Command;
 use clap2man::fill;
 
+let cmd = Command::new("test-app").about("about");
 let mut manpage = man::Manual::new("my-app");
-manpage = fill::fill_about(&cmd, manpage).unwrap();
-manpage = fill::fill_flags(&cmd, manpage).unwrap();
+manpage = fill::fill_about(&cmd, manpage)?;
+manpage = fill::fill_flags(&cmd, manpage)?;
 // Only about and flags are filled; the rest is omitted or manual.
 ```
 
 ## Comparison with alternatives
 
-- **[clap_mangen](https://crates.io/crates/clap_mangen)**: The official `clap` manpage generator. It is more mature and generates complete manpages directly from `clap`. However, it doesn't return a `man::Manual` object, which makes it harder to further customize the output using the `man` crate's API if you need to add complex custom sections or change the formatting in ways not supported by `clap`'s metadata.
-- **clap2man**: Designed specifically to bridge `clap` and the `man` crate. Use this if you want a basic manpage generated from your CLI but also want the full flexibility of the `man` crate to add additional documentation, examples, or custom formatting that doesn't belong in your `--help` output.
+- **[clap_mangen](https://crates.io/crates/clap_mangen)**:
+  The official `clap` manpage generator. It is more mature and
+  generates complete manpages directly from `clap`. However, it
+  doesn't return a `man::Manual` object, which makes it harder to
+  further customize the output using the `man` crate's API if you
+  need to add complex custom sections or change the formatting in
+  ways not supported by `clap`'s metadata.
 
-## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-SE](LICENSE) file for details.
