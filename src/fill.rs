@@ -50,7 +50,8 @@ pub fn fill_author(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
 
 /// Fills the "flags" section with all the options from the given [`Command`].
 ///
-/// This function also adds the default `-h`, `--help`, and `-V`, `--version` flags.
+/// If the command doesn't already define `-h`/`--help` or `-V`/`--version`,
+/// the standard defaults are added.
 ///
 /// # Example
 ///
@@ -75,8 +76,10 @@ pub fn fill_author(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
 pub fn fill_flags(cmd: &Command, mut manpage: man::Manual) -> Result<man::Manual> {
     let mut longs = std::collections::HashSet::new();
     let mut shorts = std::collections::HashSet::new();
+    let mut has_help = false;
+    let mut has_version = false;
 
-    for a in cmd.get_opts() {
+    for a in cmd.get_arguments() {
         if let Some(long) = a.get_long()
             && !longs.insert(long.to_string())
         {
@@ -88,32 +91,45 @@ pub fn fill_flags(cmd: &Command, mut manpage: man::Manual) -> Result<man::Manual
             return Err(Error::DuplicateShortFlag(short));
         }
 
-        let mut flag = man::Flag::new();
-        if let Some(short) = a.get_short() {
-            flag = flag.short(&format!("-{}", short));
+        match (a.get_short(), a.get_long()) {
+            (Some('h'), _) | (_, Some("help")) => has_help = true,
+            (Some('V'), _) | (_, Some("version")) => has_version = true,
+            _ => {}
         }
-        if let Some(long) = a.get_long() {
-            flag = flag.long(&format!("--{}", long));
+
+        if cmd.get_opts().any(|o| o.get_id() == a.get_id()) {
+            let mut flag = man::Flag::new();
+            if let Some(short) = a.get_short() {
+                flag = flag.short(&format!("-{}", short));
+            }
+            if let Some(long) = a.get_long() {
+                flag = flag.long(&format!("--{}", long));
+            }
+            if let Some(help) = a.get_help() {
+                flag = flag.help(&format!("{}", help));
+            }
+            manpage = manpage.flag(flag);
         }
-        if let Some(help) = a.get_help() {
-            flag = flag.help(&format!("{}", help));
-        }
-        manpage = manpage.flag(flag);
     }
 
-    Ok(manpage
-        .flag(
+    if !has_help {
+        manpage = manpage.flag(
             man::Flag::new()
                 .short("-h")
                 .long("--help")
                 .help("Print help (see a summary with '-h')"),
-        )
-        .flag(
+        );
+    }
+    if !has_version {
+        manpage = manpage.flag(
             man::Flag::new()
                 .short("-V")
                 .long("--version")
                 .help("Print version"),
-        ))
+        );
+    }
+
+    Ok(manpage)
 }
 
 /// Add the positional arguments.
