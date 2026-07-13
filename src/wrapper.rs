@@ -52,7 +52,7 @@ impl TryFrom<&Command> for Manual {
     }
 }
 
-/// Extranct the [`man::Manual`] from within this crate's [`Manual`]
+/// Extract the [`man::Manual`] from within this crate's [`Manual`]
 /// wrapper
 impl From<Manual> for man::Manual {
     fn from(man: Manual) -> Self {

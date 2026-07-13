@@ -31,6 +31,10 @@ pub fn fill_about(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
 }
 
 /// Fills the "description" section with the long_about.
+///
+/// Unlike [`fill_about`] and [`fill_author`], this intentionally
+/// returns an empty string when `long_about` is not set — a missing
+/// description is valid and common for short CLIs.
 pub fn fill_description(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
     Ok(manpage.description(
         cmd.get_long_about()
@@ -145,7 +149,7 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
         let help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
         if !help.is_empty() {
             arguments_found = true;
-            arguments_section = arguments_section.paragraph(&format!("**{}**: {}", id, help));
+            arguments_section = arguments_section.paragraph(&format!("{}: {}", id, help));
         }
     }
 
@@ -173,7 +177,7 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
             .get_about()
             .map(|s| format!("{}", s))
             .unwrap_or_default();
-        subcommands_section = subcommands_section.paragraph(&format!("**{}**: {}", name, about));
+        subcommands_section = subcommands_section.paragraph(&format!("{}: {}", name, about));
 
         let flags: Vec<String> = sub
             .get_opts()
