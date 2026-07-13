@@ -157,6 +157,9 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
 }
 
 /// Add the subcommands to a "SUBCOMMANDS" section.
+///
+/// Each subcommand's name, about text, visible flags, and visible
+/// positional arguments are included.
 pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
     let mut subcommands_section = man::Section::new("subcommands");
     let mut subcommands_found = false;
@@ -171,6 +174,35 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
             .map(|s| format!("{}", s))
             .unwrap_or_default();
         subcommands_section = subcommands_section.paragraph(&format!("**{}**: {}", name, about));
+
+        let flags: Vec<String> = sub
+            .get_opts()
+            .filter(|a| !a.is_hide_set())
+            .flat_map(|a| {
+                let mut parts = Vec::new();
+                if let Some(short) = a.get_short() {
+                    parts.push(format!("-{}", short));
+                }
+                if let Some(long) = a.get_long() {
+                    parts.push(format!("--{}", long));
+                }
+                parts
+            })
+            .collect();
+        if !flags.is_empty() {
+            subcommands_section =
+                subcommands_section.paragraph(&format!("  Flags: {}", flags.join(", ")));
+        }
+
+        let args: Vec<String> = sub
+            .get_positionals()
+            .filter(|a| !a.is_hide_set())
+            .map(|a| format!("{}", a.get_id()))
+            .collect();
+        if !args.is_empty() {
+            subcommands_section =
+                subcommands_section.paragraph(&format!("  Arguments: {}", args.join(", ")));
+        }
     }
     Ok(if subcommands_found {
         manpage.custom(subcommands_section)
