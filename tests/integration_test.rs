@@ -151,4 +151,68 @@ fn test_errors() {
         result.unwrap_err(),
         clap2man::Error::DuplicateShortFlag('f')
     ));
+
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .arg(Arg::new("flag1").long("flag"))
+        .arg(Arg::new("flag2").long("flag"));
+    let result = Manual::try_from(&cmd);
+    assert!(result.is_err());
+    assert!(matches!(
+        result.unwrap_err(),
+        clap2man::Error::DuplicateFlag(ref s) if s == "flag"
+    ));
+}
+
+#[test]
+fn test_hidden_subcommand_not_rendered() -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .subcommand(Command::new("visible").about("shown"))
+        .subcommand(Command::new("hidden").about("not shown").hide(true));
+
+    let manual = Manual::try_from(&cmd)?;
+    let manpage: man::Manual = manual.into();
+    let rendered = manpage.render();
+
+    assert!(rendered.contains("visible"));
+    assert!(!rendered.contains("hidden"));
+
+    Ok(())
+}
+
+#[test]
+fn test_fill_module_direct() -> Result<(), Box<dyn std::error::Error>> {
+    use clap2man::fill;
+
+    let cmd = Command::new("test")
+        .about("my test app")
+        .author("Test Author")
+        .long_about("Long description")
+        .arg(
+            Arg::new("verbose")
+                .short('v')
+                .long("verbose")
+                .help("Enable verbose mode")
+                .action(clap::ArgAction::SetTrue),
+        )
+        .arg(Arg::new("input").help("Input file").index(1));
+
+    let mut manpage = man::Manual::new("test");
+    manpage = fill::fill_about(&cmd, manpage)?;
+    manpage = fill::fill_description(&cmd, manpage)?;
+    manpage = fill::fill_author(&cmd, manpage)?;
+    manpage = fill::fill_flags(&cmd, manpage)?;
+    manpage = fill::fill_positionals(&cmd, manpage)?;
+    let rendered = manpage.render();
+
+    assert!(rendered.contains("my test app"));
+    assert!(rendered.contains("Long description"));
+    assert!(rendered.contains("Test Author"));
+    assert!(rendered.contains("Enable verbose mode"));
+    assert!(rendered.contains("Input file"));
+
+    Ok(())
 }
