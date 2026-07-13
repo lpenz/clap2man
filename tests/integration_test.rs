@@ -64,6 +64,68 @@ fn test_integration() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_custom_help_version_flags() -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .disable_help_flag(true)
+        .disable_version_flag(true)
+        .arg(Arg::new("help").short('?').long("help").help("Show help"))
+        .arg(
+            Arg::new("ver")
+                .short('V')
+                .long("version")
+                .help("Show version"),
+        );
+
+    let manual = Manual::try_from(&cmd)?;
+    let manpage: man::Manual = manual.into();
+    let rendered = manpage.render();
+
+    // The custom flags should appear, not duplicates
+    assert!(rendered.contains("\\-?"));
+    assert!(rendered.contains("Show help"));
+    assert!(rendered.contains("\\-\\-version"));
+    assert!(rendered.contains("Show version"));
+
+    Ok(())
+}
+
+#[test]
+fn test_subcommand_flags_and_args() -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .subcommand(
+            Command::new("sub")
+                .about("A subcommand")
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .long("output")
+                        .help("Output file"),
+                )
+                .arg(Arg::new("target").help("Target name").index(1)),
+        );
+
+    let manual = Manual::try_from(&cmd)?;
+    let manpage: man::Manual = manual.into();
+    let rendered = manpage.render();
+
+    assert!(rendered.contains("SUBCOMMANDS"));
+    assert!(rendered.contains("sub"));
+    assert!(rendered.contains("A subcommand"));
+    // Subcommand flags and args should be listed
+    assert!(rendered.contains("Flags:"));
+    assert!(rendered.contains("\\-o"));
+    assert!(rendered.contains("\\-\\-output"));
+    assert!(rendered.contains("Arguments:"));
+    assert!(rendered.contains("target"));
+
+    Ok(())
+}
+
+#[test]
 fn test_errors() {
     let cmd = Command::new("test-app");
     let result = Manual::try_from(&cmd);
