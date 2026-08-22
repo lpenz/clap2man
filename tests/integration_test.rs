@@ -50,6 +50,7 @@ fn test_integration() -> Result<(), Box<dyn std::error::Error>> {
     assert!(rendered.contains("The configuration file to use"));
     assert!(rendered.contains("input"));
     assert!(rendered.contains("ARGUMENTS"));
+    assert!(rendered.contains("\\fBinput\\fR\nThe input file"));
     assert!(rendered.contains("The input file"));
     assert!(rendered.contains("SUBCOMMANDS"));
     assert!(rendered.contains("sub"));
@@ -113,14 +114,10 @@ fn test_subcommand_flags_and_args() -> Result<(), Box<dyn std::error::Error>> {
     let rendered = manpage.render();
 
     assert!(rendered.contains("SUBCOMMANDS"));
-    assert!(rendered.contains("sub"));
-    assert!(rendered.contains("A subcommand"));
+    assert!(rendered.contains("\\fBsub\\fR\nA subcommand"));
     // Subcommand flags and args should be listed
-    assert!(rendered.contains("Flags:"));
-    assert!(rendered.contains("\\-o"));
-    assert!(rendered.contains("\\-\\-output"));
-    assert!(rendered.contains("Arguments:"));
-    assert!(rendered.contains("target"));
+    assert!(rendered.contains("Flags: \\fB\\-o\\fR, \\fB\\-\\-output\\fR"));
+    assert!(rendered.contains("Arguments: \\fItarget\\fR"));
 
     Ok(())
 }

@@ -9,6 +9,16 @@ use clap::Command;
 
 use crate::{Error, Result};
 
+/// Return the given text formatted as bold troff.
+fn bold(input: &str) -> String {
+    format!(r"\fB{input}\fR")
+}
+
+/// Return the given text formatted as italic troff.
+fn italic(input: &str) -> String {
+    format!(r"\fI{input}\fR")
+}
+
 /// Fills the "about" section.
 ///
 /// # Example
@@ -149,7 +159,8 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
         let help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
         if !help.is_empty() {
             arguments_found = true;
-            arguments_section = arguments_section.paragraph(&format!("{}: {}", id, help));
+            arguments_section =
+                arguments_section.paragraph(&format!(".TP\n{}\n{}", bold(&id), help));
         }
     }
 
@@ -162,8 +173,22 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
 
 /// Add the subcommands to a "SUBCOMMANDS" section.
 ///
-/// Each subcommand's name, about text, visible flags, and visible
-/// positional arguments are included.
+/// Each visible subcommand is rendered as a tagged list (`.TP`) entry
+/// with the name in bold, followed by the about text and, when
+/// present, the subcommand's visible flags and positional arguments.
+///
+/// # Example
+///
+/// ```rust
+/// use clap::Command;
+/// use clap2man::fill;
+///
+/// let cmd = Command::new("test").subcommand(Command::new("run").about("Run things"));
+/// let mut manpage = man::Manual::new("test");
+/// manpage = fill::fill_subcommands(&cmd, manpage).unwrap();
+/// let rendered = manpage.render();
+/// assert!(rendered.contains(".TP\n\\fBrun\\fR\nRun things"));
+/// ```
 pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
     let mut subcommands_section = man::Section::new("subcommands");
     let mut subcommands_found = false;
@@ -177,7 +202,11 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
             .get_about()
             .map(|s| format!("{}", s))
             .unwrap_or_default();
-        subcommands_section = subcommands_section.paragraph(&format!("{}: {}", name, about));
+        let mut entry = format!(".TP\n{}", bold(name));
+        if !about.is_empty() {
+            entry.push('\n');
+            entry.push_str(&about);
+        }
 
         let flags: Vec<String> = sub
             .get_opts()
@@ -185,28 +214,30 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
             .flat_map(|a| {
                 let mut parts = Vec::new();
                 if let Some(short) = a.get_short() {
-                    parts.push(format!("-{}", short));
+                    parts.push(bold(&format!("-{}", short)));
                 }
                 if let Some(long) = a.get_long() {
-                    parts.push(format!("--{}", long));
+                    parts.push(bold(&format!("--{}", long)));
                 }
                 parts
             })
             .collect();
         if !flags.is_empty() {
-            subcommands_section =
-                subcommands_section.paragraph(&format!("  Flags: {}", flags.join(", ")));
+            entry.push_str("\n.br\nFlags: ");
+            entry.push_str(&flags.join(", "));
         }
 
         let args: Vec<String> = sub
             .get_positionals()
             .filter(|a| !a.is_hide_set())
-            .map(|a| format!("{}", a.get_id()))
+            .map(|a| italic(&format!("{}", a.get_id())))
             .collect();
         if !args.is_empty() {
-            subcommands_section =
-                subcommands_section.paragraph(&format!("  Arguments: {}", args.join(", ")));
+            entry.push_str("\n.br\nArguments: ");
+            entry.push_str(&args.join(", "));
         }
+
+        subcommands_section = subcommands_section.paragraph(&entry);
     }
     Ok(if subcommands_found {
         manpage.custom(subcommands_section)
