@@ -19,6 +19,28 @@ fn italic(input: &str) -> String {
     format!(r"\fI{input}\fR")
 }
 
+/// Return a roff line listing the visible possible values of the
+/// given argument.
+///
+/// Each value is rendered in bold, followed by its help in
+/// parentheses when present.  Returns an empty string when there is
+/// nothing to display.
+fn possible_values_line(a: &clap::Arg) -> String {
+    let values: Vec<String> = a
+        .get_possible_values()
+        .iter()
+        .filter(|v| !v.is_hide_set())
+        .map(|v| match v.get_help() {
+            Some(help) => format!("{} ({})", bold(v.get_name()), help),
+            None => bold(v.get_name()),
+        })
+        .collect();
+    if values.is_empty() {
+        return String::new();
+    }
+    format!(".br\nPossible values: {}", values.join(", "))
+}
+
 /// Fills the "about" section.
 ///
 /// # Example
@@ -119,8 +141,14 @@ pub fn fill_flags(cmd: &Command, mut manpage: man::Manual) -> Result<man::Manual
             if let Some(long) = a.get_long() {
                 flag = flag.long(&format!("--{}", long));
             }
-            if let Some(help) = a.get_help() {
-                flag = flag.help(&format!("{}", help));
+            let mut help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
+            let pv_line = possible_values_line(a);
+            if !pv_line.is_empty() {
+                help.push('\n');
+                help.push_str(&pv_line);
+            }
+            if !help.is_empty() {
+                flag = flag.help(&help);
             }
             manpage = manpage.flag(flag);
         }
@@ -157,10 +185,19 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
         manpage = manpage.arg(arg);
 
         let help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
-        if !help.is_empty() {
+        let pv_line = possible_values_line(a);
+        if !help.is_empty() || !pv_line.is_empty() {
             arguments_found = true;
-            arguments_section =
-                arguments_section.paragraph(&format!(".TP\n{}\n{}", bold(&id), help));
+            let mut entry = format!(".TP\n{}", bold(&id));
+            if !help.is_empty() {
+                entry.push('\n');
+                entry.push_str(&help);
+            }
+            if !pv_line.is_empty() {
+                entry.push('\n');
+                entry.push_str(&pv_line);
+            }
+            arguments_section = arguments_section.paragraph(&entry);
         }
     }
 
@@ -235,6 +272,14 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
         if !args.is_empty() {
             entry.push_str("\n.br\nArguments: ");
             entry.push_str(&args.join(", "));
+        }
+
+        for a in sub.get_positionals().filter(|a| !a.is_hide_set()) {
+            let pv_line = possible_values_line(a);
+            if !pv_line.is_empty() {
+                entry.push('\n');
+                entry.push_str(&pv_line);
+            }
         }
 
         subcommands_section = subcommands_section.paragraph(&entry);

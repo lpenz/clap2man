@@ -123,6 +123,55 @@ fn test_subcommand_flags_and_args() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_possible_values() -> Result<(), Box<dyn std::error::Error>> {
+    use clap::ValueEnum;
+
+    #[derive(Clone, ValueEnum)]
+    enum Color {
+        /// Bright red
+        Red,
+        Green,
+    }
+
+    #[derive(Clone, ValueEnum)]
+    enum Shade {
+        /// Very light
+        Light,
+        Dark,
+    }
+
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .arg(
+            Arg::new("color")
+                .short('C')
+                .long("color")
+                .help("Color to use")
+                .value_parser(clap::builder::EnumValueParser::<Color>::new()),
+        )
+        .subcommand(
+            Command::new("paint").about("Paint things").arg(
+                Arg::new("shade")
+                    .help("Shade of the color")
+                    .index(1)
+                    .value_parser(clap::builder::EnumValueParser::<Shade>::new()),
+            ),
+        );
+
+    let manual = Manual::try_from(&cmd)?;
+    let manpage: man::Manual = manual.into();
+    let rendered = manpage.render();
+
+    // Possible values are rendered for top-level flags...
+    assert!(rendered.contains("Possible values: \\fBred\\fR (Bright red), \\fBgreen\\fR"));
+    // ...and for subcommand positional arguments
+    assert!(rendered.contains("Possible values: \\fBlight\\fR (Very light), \\fBdark\\fR"));
+
+    Ok(())
+}
+
+#[test]
 fn test_errors() {
     let cmd = Command::new("test-app");
     let result = Manual::try_from(&cmd);
