@@ -69,6 +69,14 @@ generates a full man page from a clap command definition using the
 derive pattern, including flags, positional arguments, subcommands and
 a custom extra section.
 
+Since the example parses its own command line with the same
+definition, you can also take a look at the corresponding `--help`
+output:
+
+```sh
+cargo run --example full_manpage -- --help
+```
+
 Run it with:
 
 ```sh
