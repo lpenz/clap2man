@@ -112,10 +112,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // customize it before rendering.
     // Note: the roff crate escapes "-" automatically, so plain
     // dashes are used here:
-    manpage =
-        manpage.custom(man::Section::new("examples").paragraph(
-            "Validate file.txt strictly:\n.TP\nmyapp --config my.conf -s check file.txt",
-        ));
+    manpage = manpage.custom(
+        man::Section::new("examples")
+            .paragraph(
+                "Validate file.txt strictly:\n.TP\nmyapp --config my.conf -s check file.txt",
+            )
+            .paragraph(
+                "Convert file.txt to JSON, writing the result to result.json:\n.TP\nmyapp convert --output result.json json",
+            ),
+    );
 
     print!("{}", manpage.render());
     Ok(())
