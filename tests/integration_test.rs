@@ -124,6 +124,46 @@ fn test_subcommand_flags_and_args() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 #[test]
+fn test_synopsis_subcommands() -> Result<(), Box<dyn std::error::Error>> {
+    let cmd = Command::new("test-app")
+        .about("about")
+        .author("author")
+        .subcommand(
+            Command::new("check").arg(
+                Arg::new("strict")
+                    .short('s')
+                    .long("strict")
+                    .action(clap::ArgAction::SetTrue),
+            ),
+        )
+        .subcommand(
+            Command::new("convert")
+                .arg(
+                    Arg::new("output")
+                        .short('o')
+                        .long("output")
+                        .value_name("FILE"),
+                )
+                .arg(Arg::new("format").index(1).required(false)),
+        );
+
+    let manual = Manual::try_from(&cmd)?;
+    let manpage: man::Manual = manual.into();
+    let rendered = manpage.render();
+
+    // Each subcommand gets its own line in the SYNOPSIS section, with
+    // its options and arguments
+    assert!(rendered.contains(".br\n\\fBtest\\-app\\fR \\fBcheck\\fR [\\-\\-strict]"));
+    assert!(
+        rendered.contains(
+            ".br\n\\fBtest\\-app\\fR \\fBconvert\\fR [\\-\\-output FILE] [\\fIformat\\fR]"
+        )
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_possible_values() -> Result<(), Box<dyn std::error::Error>> {
     use clap::ValueEnum;
 

@@ -14,6 +14,11 @@ fn bold(input: &str) -> String {
     format!(r"\fB{input}\fR")
 }
 
+/// Return the given text formatted as italic troff.
+fn italic(input: &str) -> String {
+    format!(r"\fI{input}\fR")
+}
+
 /// Return a roff line listing the visible possible values of the
 /// given argument.
 ///
@@ -131,6 +136,78 @@ pub fn fill_author(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
         .map(|s| s.to_string())
         .ok_or(Error::MissingAuthor)?;
     Ok(manpage.author(man::Author::new(&author)))
+}
+
+/// Return the value placeholder of the given argument, used in
+/// synopsis entries: either its value name or its id uppercased.
+fn value_placeholder(a: &clap::Arg) -> String {
+    a.get_value_names()
+        .and_then(|names| names.first())
+        .map(|s| s.to_string())
+        .unwrap_or_else(|| a.get_id().to_string().to_uppercase())
+}
+
+/// Return the SYNOPSIS roff line for the given subcommand, listing
+/// its visible options and positional arguments.
+fn synopsis_line(name: &str, sub: &Command) -> String {
+    let mut line = format!("\n.br\n{} {}", bold(name), bold(sub.get_name()));
+    for a in sub.get_opts().filter(|a| !a.is_hide_set()) {
+        let flag = match (a.get_long(), a.get_short()) {
+            (Some(long), _) => format!("--{}", long),
+            (_, Some(short)) => format!("-{}", short),
+            (None, None) => continue,
+        };
+        if matches!(
+            a.get_action(),
+            clap::ArgAction::Set | clap::ArgAction::Append
+        ) {
+            line.push_str(&format!(" [{} {}]", flag, value_placeholder(a)));
+        } else {
+            line.push_str(&format!(" [{}]", flag));
+        }
+    }
+    for a in sub.get_positionals().filter(|a| !a.is_hide_set()) {
+        let placeholder = italic(&format!("{}", a.get_id()));
+        if a.is_required_set() {
+            line.push(' ');
+            line.push_str(&placeholder);
+        } else {
+            line.push_str(&format!(" [{}]", placeholder));
+        }
+    }
+    line
+}
+
+/// Add a SYNOPSIS line for each visible subcommand, containing its
+/// options and positional arguments.
+///
+/// The extra lines are added as synthetic argument entries, which the
+/// [man] crate renders inside the SYNOPSIS section.
+///
+/// # Example
+///
+/// ```rust
+/// use clap::{Arg, Command};
+/// use clap2man::fill;
+///
+/// let cmd = Command::new("test")
+///     .about("about")
+///     .subcommand(Command::new("run").arg(Arg::new("target").index(1)));
+/// let mut manpage = man::Manual::new("test");
+/// manpage = fill::fill_synopsis(&cmd, manpage)?;
+/// let rendered = manpage.render();
+/// assert!(rendered.contains(".br\n\\fBtest\\fR \\fBrun\\fR [\\fItarget\\fR]"));
+/// # Ok::<(), clap2man::Error>(())
+/// ```
+pub fn fill_synopsis(cmd: &Command, mut manpage: man::Manual) -> Result<man::Manual> {
+    let name = cmd
+        .get_display_name()
+        .unwrap_or_else(|| cmd.get_name())
+        .to_owned();
+    for sub in cmd.get_subcommands().filter(|s| !s.is_hide_set()) {
+        manpage = manpage.arg(man::Arg::new(&synopsis_line(&name, sub)));
+    }
+    Ok(manpage)
 }
 
 /// Fills the "flags" section with all the options from the given [`Command`].
