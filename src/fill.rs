@@ -147,10 +147,10 @@ fn value_placeholder(a: &clap::Arg) -> String {
         .unwrap_or_else(|| a.get_id().to_string().to_uppercase())
 }
 
-/// Return the SYNOPSIS roff line for the given subcommand, listing
-/// its visible options and positional arguments.
-fn synopsis_line(name: &str, sub: &Command) -> String {
-    let mut line = format!("\n.br\n{} {}", bold(name), bold(sub.get_name()));
+/// Return the roff synopsis body for the given subcommand: its name
+/// followed by its visible options and positional arguments.
+fn synopsis_body(name: &str, sub: &Command) -> String {
+    let mut line = format!("{} {}", bold(name), bold(sub.get_name()));
     for a in sub.get_opts().filter(|a| !a.is_hide_set()) {
         let flag = match (a.get_long(), a.get_short()) {
             (Some(long), _) => format!("--{}", long),
@@ -176,6 +176,12 @@ fn synopsis_line(name: &str, sub: &Command) -> String {
         }
     }
     line
+}
+
+/// Return the SYNOPSIS roff line for the given subcommand, listing
+/// its visible options and positional arguments.
+fn synopsis_line(name: &str, sub: &Command) -> String {
+    format!("\n.br\n{}", synopsis_body(name, sub))
 }
 
 /// Add a SYNOPSIS line for each visible subcommand, containing its
@@ -321,8 +327,9 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
 /// Add the subcommands to a "SUBCOMMANDS" section.
 ///
 /// Each visible subcommand is rendered as its own subsection (roff
-/// `.SS`) containing the about text, followed by the subcommand's
-/// visible options and positional arguments as tagged lists.
+/// `.SS`) containing the about text and a synopsis/usage line,
+/// followed by the subcommand's visible options and positional
+/// arguments as tagged lists.
 ///
 /// # Example
 ///
@@ -339,6 +346,7 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
 /// manpage = fill::fill_subcommands(&cmd, manpage).unwrap();
 /// let rendered = manpage.render();
 /// assert!(rendered.contains(".SS run\nRun things"));
+/// assert!(rendered.contains("Usage: \\fBtest\\fR \\fBrun\\fR [\\fItarget\\fR]"));
 /// assert!(rendered.contains("\\fBtarget\\fR\nTarget name"));
 /// ```
 pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
@@ -355,6 +363,11 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
             heading.push('\n');
             heading.push_str(&format!("{}", about));
         }
+        let parent_name = cmd.get_display_name().unwrap_or_else(|| cmd.get_name());
+        heading.push_str(&format!(
+            "\n.br\nUsage: {}",
+            synopsis_body(parent_name, sub)
+        ));
         subcommands_section = subcommands_section.paragraph(&heading);
 
         for a in sub.get_opts().filter(|a| !a.is_hide_set()) {

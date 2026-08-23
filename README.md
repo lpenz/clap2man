@@ -107,7 +107,8 @@ cargo run --example full_manpage | man -l -
   - Flags/Options (automatically adds standard help and version flags)
   - Positional Arguments
   - Possible values (e.g. value enums, including their per-value docs)
-  - Subcommands (each one rendered as its own subsection)
+  - Subcommands (each one rendered as its own subsection, including
+    its synopsis)
   - A `SYNOPSIS` line per subcommand, including their options and
     arguments
 - Returns a `man::Manual` object that can be further customized.

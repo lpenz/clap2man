@@ -113,8 +113,14 @@ fn test_subcommand_flags_and_args() -> Result<(), Box<dyn std::error::Error>> {
     let rendered = manpage.render();
 
     assert!(rendered.contains("SUBCOMMANDS"));
-    // Each subcommand gets its own subsection
+    // Each subcommand gets its own subsection, including a synopsis
+    // line for the subcommand
     assert!(rendered.contains(".SS sub\nA subcommand"));
+    assert!(
+        rendered.contains(
+            "Usage: \\fBtest\\-app\\fR \\fBsub\\fR [\\-\\-output OUTPUT] [\\fItarget\\fR]"
+        )
+    );
     // Subcommand flags and args are rendered as tagged lists inside
     // the subsection
     assert!(rendered.contains("\\fB\\-o\\fR, \\fB\\-\\-output\\fR\nOutput file"));
