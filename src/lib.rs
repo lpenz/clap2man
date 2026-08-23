@@ -75,7 +75,7 @@
 //!   - Author
 //!   - Flags/Options (automatically adds standard help and version flags)
 //!   - Positional Arguments
-//!   - Subcommands
+//!   - Subcommands (each one rendered as its own subsection)
 //! - Returns a `man::Manual` object that can be further customized.
 //!
 //! ## Customization

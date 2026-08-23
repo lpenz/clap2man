@@ -53,8 +53,7 @@ fn test_integration() -> Result<(), Box<dyn std::error::Error>> {
     assert!(rendered.contains("\\fBinput\\fR\nThe input file"));
     assert!(rendered.contains("The input file"));
     assert!(rendered.contains("SUBCOMMANDS"));
-    assert!(rendered.contains("sub"));
-    assert!(rendered.contains("A subcommand"));
+    assert!(rendered.contains(".SS sub\nA subcommand"));
 
     // Check if flags are correctly formatted in ROFF
     assert!(rendered.contains("\\-v"));
@@ -114,10 +113,12 @@ fn test_subcommand_flags_and_args() -> Result<(), Box<dyn std::error::Error>> {
     let rendered = manpage.render();
 
     assert!(rendered.contains("SUBCOMMANDS"));
-    assert!(rendered.contains("\\fBsub\\fR\nA subcommand"));
-    // Subcommand flags and args should be listed
-    assert!(rendered.contains("Flags: \\fB\\-o\\fR, \\fB\\-\\-output\\fR"));
-    assert!(rendered.contains("Arguments: \\fItarget\\fR"));
+    // Each subcommand gets its own subsection
+    assert!(rendered.contains(".SS sub\nA subcommand"));
+    // Subcommand flags and args are rendered as tagged lists inside
+    // the subsection
+    assert!(rendered.contains("\\fB\\-o\\fR, \\fB\\-\\-output\\fR\nOutput file"));
+    assert!(rendered.contains("\\fBtarget\\fR\nTarget name"));
 
     Ok(())
 }
@@ -165,7 +166,8 @@ fn test_possible_values() -> Result<(), Box<dyn std::error::Error>> {
 
     // Possible values are rendered for top-level flags...
     assert!(rendered.contains("Possible values: \\fBred\\fR (Bright red), \\fBgreen\\fR"));
-    // ...and for subcommand positional arguments
+    // ...and inside the subcommand's subsection
+    assert!(rendered.contains(".SS paint\nPaint things"));
     assert!(rendered.contains("Possible values: \\fBlight\\fR (Very light), \\fBdark\\fR"));
 
     Ok(())

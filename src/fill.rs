@@ -14,11 +14,6 @@ fn bold(input: &str) -> String {
     format!(r"\fB{input}\fR")
 }
 
-/// Return the given text formatted as italic troff.
-fn italic(input: &str) -> String {
-    format!(r"\fI{input}\fR")
-}
-
 /// Return a roff line listing the visible possible values of the
 /// given argument.
 ///
@@ -39,6 +34,60 @@ fn possible_values_line(a: &clap::Arg) -> String {
         return String::new();
     }
     format!(".br\nPossible values: {}", values.join(", "))
+}
+
+/// Return the help text of the given argument, followed by its
+/// possible values line when present.
+fn help_with_possible_values(a: &clap::Arg) -> String {
+    let mut help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
+    let pv_line = possible_values_line(a);
+    if !pv_line.is_empty() {
+        if !help.is_empty() {
+            help.push('\n');
+        }
+        help.push_str(&pv_line);
+    }
+    help
+}
+
+/// Return a roff tagged-list (`.TP`) entry describing a single
+/// option of the given command, including its help and possible
+/// values.
+///
+/// Returns `None` when the argument has no short or long name.
+fn flag_entry(a: &clap::Arg) -> Option<String> {
+    let mut names = Vec::new();
+    if let Some(short) = a.get_short() {
+        names.push(bold(&format!("-{}", short)));
+    }
+    if let Some(long) = a.get_long() {
+        names.push(bold(&format!("--{}", long)));
+    }
+    if names.is_empty() {
+        return None;
+    }
+    let header = names.join(", ");
+    let help = help_with_possible_values(a);
+    Some(if help.is_empty() {
+        format!(".TP\n{}", header)
+    } else {
+        format!(".TP\n{}\n{}", header, help)
+    })
+}
+
+/// Return a roff tagged-list (`.TP`) entry describing a single
+/// positional argument of the given command, including its help and
+/// possible values.
+///
+/// Returns `None` when the argument has no help and no possible
+/// values.
+fn positional_entry(a: &clap::Arg) -> Option<String> {
+    let help = help_with_possible_values(a);
+    if help.is_empty() {
+        return None;
+    }
+    let id = format!("{}", a.get_id());
+    Some(format!(".TP\n{}\n{}", bold(&id), help))
 }
 
 /// Fills the "about" section.
@@ -141,12 +190,7 @@ pub fn fill_flags(cmd: &Command, mut manpage: man::Manual) -> Result<man::Manual
             if let Some(long) = a.get_long() {
                 flag = flag.long(&format!("--{}", long));
             }
-            let mut help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
-            let pv_line = possible_values_line(a);
-            if !pv_line.is_empty() {
-                help.push('\n');
-                help.push_str(&pv_line);
-            }
+            let help = help_with_possible_values(a);
             if !help.is_empty() {
                 flag = flag.help(&help);
             }
@@ -184,19 +228,8 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
         let arg = man::Arg::new(&id);
         manpage = manpage.arg(arg);
 
-        let help = a.get_help().map(|s| format!("{}", s)).unwrap_or_default();
-        let pv_line = possible_values_line(a);
-        if !help.is_empty() || !pv_line.is_empty() {
+        if let Some(entry) = positional_entry(a) {
             arguments_found = true;
-            let mut entry = format!(".TP\n{}", bold(&id));
-            if !help.is_empty() {
-                entry.push('\n');
-                entry.push_str(&help);
-            }
-            if !pv_line.is_empty() {
-                entry.push('\n');
-                entry.push_str(&pv_line);
-            }
             arguments_section = arguments_section.paragraph(&entry);
         }
     }
@@ -210,21 +243,26 @@ pub fn fill_positionals(cmd: &Command, mut manpage: man::Manual) -> Result<man::
 
 /// Add the subcommands to a "SUBCOMMANDS" section.
 ///
-/// Each visible subcommand is rendered as a tagged list (`.TP`) entry
-/// with the name in bold, followed by the about text and, when
-/// present, the subcommand's visible flags and positional arguments.
+/// Each visible subcommand is rendered as its own subsection (roff
+/// `.SS`) containing the about text, followed by the subcommand's
+/// visible options and positional arguments as tagged lists.
 ///
 /// # Example
 ///
 /// ```rust
-/// use clap::Command;
+/// use clap::{Arg, Command};
 /// use clap2man::fill;
 ///
-/// let cmd = Command::new("test").subcommand(Command::new("run").about("Run things"));
+/// let cmd = Command::new("test").subcommand(
+///     Command::new("run")
+///         .about("Run things")
+///         .arg(Arg::new("target").help("Target name").index(1)),
+/// );
 /// let mut manpage = man::Manual::new("test");
 /// manpage = fill::fill_subcommands(&cmd, manpage).unwrap();
 /// let rendered = manpage.render();
-/// assert!(rendered.contains(".TP\n\\fBrun\\fR\nRun things"));
+/// assert!(rendered.contains(".SS run\nRun things"));
+/// assert!(rendered.contains("\\fBtarget\\fR\nTarget name"));
 /// ```
 pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manual> {
     let mut subcommands_section = man::Section::new("subcommands");
@@ -234,55 +272,25 @@ pub fn fill_subcommands(cmd: &Command, manpage: man::Manual) -> Result<man::Manu
             continue;
         }
         subcommands_found = true;
-        let name = sub.get_name();
-        let about = sub
-            .get_about()
-            .map(|s| format!("{}", s))
-            .unwrap_or_default();
-        let mut entry = format!(".TP\n{}", bold(name));
-        if !about.is_empty() {
-            entry.push('\n');
-            entry.push_str(&about);
-        }
 
-        let flags: Vec<String> = sub
-            .get_opts()
-            .filter(|a| !a.is_hide_set())
-            .flat_map(|a| {
-                let mut parts = Vec::new();
-                if let Some(short) = a.get_short() {
-                    parts.push(bold(&format!("-{}", short)));
-                }
-                if let Some(long) = a.get_long() {
-                    parts.push(bold(&format!("--{}", long)));
-                }
-                parts
-            })
-            .collect();
-        if !flags.is_empty() {
-            entry.push_str("\n.br\nFlags: ");
-            entry.push_str(&flags.join(", "));
+        let mut heading = format!(".SS {}", sub.get_name());
+        if let Some(about) = sub.get_about() {
+            heading.push('\n');
+            heading.push_str(&format!("{}", about));
         }
+        subcommands_section = subcommands_section.paragraph(&heading);
 
-        let args: Vec<String> = sub
-            .get_positionals()
-            .filter(|a| !a.is_hide_set())
-            .map(|a| italic(&format!("{}", a.get_id())))
-            .collect();
-        if !args.is_empty() {
-            entry.push_str("\n.br\nArguments: ");
-            entry.push_str(&args.join(", "));
-        }
-
-        for a in sub.get_positionals().filter(|a| !a.is_hide_set()) {
-            let pv_line = possible_values_line(a);
-            if !pv_line.is_empty() {
-                entry.push('\n');
-                entry.push_str(&pv_line);
+        for a in sub.get_opts().filter(|a| !a.is_hide_set()) {
+            if let Some(entry) = flag_entry(a) {
+                subcommands_section = subcommands_section.paragraph(&entry);
             }
         }
 
-        subcommands_section = subcommands_section.paragraph(&entry);
+        for a in sub.get_positionals().filter(|a| !a.is_hide_set()) {
+            if let Some(entry) = positional_entry(a) {
+                subcommands_section = subcommands_section.paragraph(&entry);
+            }
+        }
     }
     Ok(if subcommands_found {
         manpage.custom(subcommands_section)
