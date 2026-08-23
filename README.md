@@ -62,6 +62,33 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+## Example
+
+The [examples](examples) directory contains a complete example that
+generates a full man page from a clap command definition using the
+derive pattern, including flags, positional arguments, subcommands and
+a custom extra section.
+
+Run it with:
+
+```sh
+cargo run --example full_manpage
+```
+
+The man page is written to stdout, so you can either save it to a file
+and view it with `man`:
+
+```sh
+cargo run --example full_manpage > myapp.1
+man ./myapp.1
+```
+
+or pipe it directly into `man`:
+
+```sh
+cargo run --example full_manpage | man -l -
+```
+
 ## Features
 
 - Converts basic information from a `clap::Command`:

@@ -15,3 +15,6 @@ keywords = ["clap", "cli", "manpage", "generator"]
 clap = "4.6.6"
 man = "0.3.0"
 thiserror = "2.0.20"
+
+[dev-dependencies]
+clap = { version = "4.6.6", features = ["derive"] }
